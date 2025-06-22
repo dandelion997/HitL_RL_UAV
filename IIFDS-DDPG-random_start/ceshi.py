@@ -1,0 +1,10 @@
+import numpy as np
+theta= np.array([0.0,0.0,0.0])
+omega=1/(1+np.exp(-theta))
+#print(omega)
+sigma=np.array([1.0,1.0,1.0])
+print(1+sigma)
+# covariance=np.diag(sigma)
+# x=np.random.multivariate_normal(theta,covariance)
+# K_2=(np.sqrt(3)-1)*(2-np.sqrt(3))/((3-np.sqrt(3))**3)
+# print(K_2)
