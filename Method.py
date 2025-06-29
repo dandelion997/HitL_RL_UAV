@@ -9,7 +9,7 @@ device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def getReward(obsCenter, qNext, q, qBefore, iifds):
     """
-    获取强化学习奖励值函数
+    Obtain the reward value function in reinforcement learning
     """
     distance = iifds.distanceCost(qNext, obsCenter)
     flag = True if distance <= iifds.obsR else False
@@ -26,7 +26,7 @@ def getReward(obsCenter, qNext, q, qBefore, iifds):
             reward += -distance1/distance2
         else:
             reward += -distance1/distance2 + 3
-    """获取奖励值函数第二版本"""
+    """Acquiring the Reward Value Function: Version 2"""
     # distance = iifds.distanceCost(qNext, obsCenter)
     # flag = True if distance <= iifds.obsR else False
     # reward = 0
@@ -47,7 +47,7 @@ def getReward(obsCenter, qNext, q, qBefore, iifds):
     return reward
 
 def get_reward_multiple(env,qNext,dic):
-    """多动态障碍环境获取reward函数"""
+    """Obtain the reward function for multiple dynamic obstacles"""
     reward = 0
     distance = env.distanceCost(qNext,dic['obsCenter'])
     if distance<=dic['obs_r']:
@@ -67,8 +67,8 @@ def get_reward_multiple(env,qNext,dic):
 
 def drawActionCurve(actionCurveList):
     """
-    :param actionCurveList: 动作值列表
-    :return: None 绘制图像
+    :param actionCurveList: List of action-values
+    :return: None Plotting the image
     """
     plt.figure()
     for i in range(actionCurveList.shape[1]):
@@ -89,12 +89,12 @@ def checkPath(apf):
         sum += apf.distanceCost(apf.path[i,:], apf.path[i+1,:])
     for i, j in zip(apf.path, apf.dynamicSphere_Path):
         if apf.distanceCost(i,j) <= apf.dynamicSphere_R:
-            print('与障碍物有交点，轨迹距离为：', sum)
+            print('There is an intersection with the obstacle, and the trajectory distance is:', sum)
             return
-    print('与障碍物无交点，轨迹距离为：', sum)
+    print('No intersection with the obstacle, trajectory distance is:', sum)
 
 def transformAction(actionBefore, actionBound, actionDim):
-    """将强化学习输出的动作映射到指定的动作范围"""
+    """Map the actions output by reinforcement learning to the specified action range"""
     actionAfter = []
     for i in range(actionDim):
         action_i = actionBefore[i]
@@ -104,8 +104,8 @@ def transformAction(actionBefore, actionBound, actionDim):
 
 
 def test(iifds, pi, conf):
-    """动态单障碍环境测试训练效果"""
-    iifds.reset()    # 重置环境
+    """Test the training effect in a dynamic single-obstacle environment"""
+    iifds.reset()    # Reset the environment
     q = iifds.start
     qBefore = [None, None, None]
     rewardSum = 0
@@ -116,7 +116,7 @@ def test(iifds, pi, conf):
         obs = torch.as_tensor(obs, dtype=torch.float, device=device)
         action = pi(obs).cpu().detach().numpy()
         action = transformAction(action, conf.actionBound, conf.act_dim)
-        # 与环境交互
+        # Interact with the environment
         qNext = iifds.getqNext(q, obsCenter, vObs, action[0], action[1], action[2], qBefore)
         rewardSum += getReward(obsCenterNext, qNext, q, qBefore, iifds)
 
@@ -128,9 +128,9 @@ def test(iifds, pi, conf):
     return rewardSum
 
 def test_multiple(pi, conf):
-    """动态多障碍环境测试模型效果"""
+    """Test the model performance in a dynamic multi-obstacle environment"""
     reward_list = []
-    for index in range(1,7):      # 从1-6一共6个测试环境，遍历测试
+    for index in range(1,7):      # There are 6 test environments from 1 to 6
         env = Environment(index)
         env.reset()
         q = env.start
@@ -154,7 +154,7 @@ def test_multiple(pi, conf):
 
 
 def setup_seed(seed):
-    """设置随机数种子函数"""
+    """Function to set random seed"""
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
