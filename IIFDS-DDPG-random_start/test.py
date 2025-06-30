@@ -1,6 +1,6 @@
 import sys,os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-"""这个文件是针对单动态障碍的测试环境，测试后打开matlab运行test.m即可得到可视化结果"""
+"""This file is for the testing environment with a single dynamic obstacle. After testing, open MATLAB and run test.m to obtain visualization results."""
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -35,7 +35,6 @@ if __name__ == "__main__":
         #print(action)
         action_stack.append(action)
         actionCurve = np.append(actionCurve, action)
-        # 与环境交互
         qNext = iifds.getqNext(q, obsCenter, vObs, action[0], action[1], action[2], qBefore)
         r=getReward(obsCenterNext, qNext, q, qBefore, iifds)
         reward_stack.append(r)
@@ -51,13 +50,6 @@ if __name__ == "__main__":
         path = np.vstack((path, q))
 
     drawActionCurve(actionCurve.reshape(-1,3))
-    #np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-DDPG-random_start/env3_csv/pathMatrix_al3.csv', path, delimiter=',')
-    #np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-DDPG-random_start/env2_csv/pathMatrix_rl4.csv', path, delimiter=',')
-    #np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-DDPG-random_start/env3_csv/reward_al3.csv', reward_stack, delimiter=',')
-    #np.savetxt('/home/prolee/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-DDPG-random_start/shiyan_csv/pathMatrix_m4.csv', path, delimiter=',')
-    #np.savetxt('/home/prolee/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-DDPG-random_start/shiyan_csv/reward_m4.csv', reward_stack, delimiter=',')
-    #np.savetxt('/home/prolee/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-DDPG-random_start/data_csv/action_m2.csv', action_stack, delimiter=',')
-    #iifds.save_data()
     routeLen = iifds.calPathLen(path)
-    print('该路径的奖励总和为:%f，路径的长度为:%f' % (rewardSum,routeLen))
+    print('The total reward for this path is: %f, and the length of the path is: %f' % (rewardSum,routeLen))
     plt.show()

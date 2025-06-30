@@ -14,11 +14,11 @@ class Painter:
         else:
             self.load_dir = load_dir
             if os.path.exists(self.load_dir):
-                print("==正在读取{}。".format(self.load_dir))
+                print("==Reading {}.".format(self.load_dir))
                 self.data = pd.read_csv(self.load_dir).iloc[:,1:] # csv文件第一列是index，不用取。
-                print("==读取完毕。")
+                print("==Read complete.")
             else:
-                print("==不存在{}下的文件，Painter已经自动创建该csv。".format(self.load_dir))
+                print("==No files found under {}, Painter has automatically created this csv.".format(self.load_dir))
                 self.data = pd.DataFrame(columns=['episode reward', 'episode', 'Method'])
         self.xlabel = None
         self.ylabel = None
@@ -32,7 +32,7 @@ class Painter:
     def setTitle(self, label): self.title = label
 
     def setHueOrder(self,order):
-        """设置成['name1','name2'...]形式"""
+        """Set to ['name1','name2'...] format"""
         self.hue_order = order
 
     def addData(self, dataSeries, method, x=None, smooth = True):
@@ -41,7 +41,7 @@ class Painter:
         size = len(dataSeries)
         if x is not None:
             if len(x) != size:
-                print("请输入相同维度的x!")
+                print("Please enter x with the same dimensions!")
                 return
         for i in range(size):
             if x is not None:
@@ -56,33 +56,33 @@ class Painter:
         """
         sns.set_theme(style=style)
         sns.set_style(rc={"linewidth": 1})
-        print("==正在绘图...")
+        print("==Drawing...")
         sns.relplot(data = self.data, kind = "line", x = "episode", y = "episode reward",
                     hue= "Method", hue_order=None)
         plt.title(self.title,fontsize = 12)
         plt.xlabel(self.xlabel)
         plt.ylabel(self.ylabel)
-        print("==绘图完毕！")
+        print("==Drawing complete!")
         plt.show()
 
     def saveData(self, save_dir):
         self.data.to_csv(save_dir)
-        print("==已将数据保存到路径{}下!".format(save_dir))
+        print("==Data has been saved to {}.".format(save_dir))
 
     def addCsv(self, add_load_dir):
-        """将另一个csv文件合并到load_dir的csv文件里。"""
+        """Merge another csv file into the csv file under load_dir."""
         add_csv = pd.read_csv(add_load_dir).iloc[:,1:]
         self.data = pd.concat([self.data, add_csv],axis=0,ignore_index=True)
 
     def deleteData(self,delete_data_name):
-        """删除某个method的数据，删除之后需要手动保存，不会自动保存。"""
+        """Delete the data of a certain method. After deletion, manual saving is required and will not be saved automatically."""
         self.data = self.data[~self.data['Method'].isin([delete_data_name])]
-        print("==已删除{}下对应数据!".format(delete_data_name))
+        print("==Deleted corresponding data under {}!".format(delete_data_name))
 
     def smoothData(self, smooth_method_name,N):
-        """对某个方法下的reward进行MA滤波，N为MA滤波阶数。"""
+        """Perform MA filtering on the reward of a certain method, where N is the order of the MA filtering."""
         begin_index = -1
-        mode = -1  # mode为-1表示还没搜索到初始索引， mode为1表示正在搜索末尾索引。
+        mode = -1  # mode -1 means the initial index has not been found, mode 1 means the end index is being searched.
         for i in range(len(self.data)):
             if self.data.iloc[i]['Method'] == smooth_method_name and mode == -1:
                 begin_index = i
@@ -101,7 +101,7 @@ class Painter:
                 self.data.iloc[begin_index:,0]= self.smooth(
                     self.data.iloc[begin_index:,0], N=N
                 )
-        print("==对{}数据{}次平滑完成!".format(smooth_method_name,N))
+        print("==Performed {} smoothing {} times!".format(smooth_method_name,N))
 
     @staticmethod
     def smooth(data,N=5):

@@ -8,53 +8,53 @@ from dynamic_obstacle_environment import obs_list
 from Method import getReward
 
 class IIFDS:
-    """使用IIFDS类训练时每次必须reset"""
+    """Each training iteration with the IIFDS class requires a reset"""
     def __init__(self):
-        """基本参数："""
+        """basic parameters"""
         self.V0 = 1
         self.threshold = 0.2
         self.stepSize = 0.1
-        self.lam = 8           # 越大考虑障碍物速度越明显
+        self.lam = 8           # The larger the value, the more the speed of the obstacle is considered
 
         self.obsR  = 1.5
         self.start = np.array([0,2,5],dtype=float)
         self.goal = np.array([10,10,5.5],dtype=float)
 
-        self.timelog = 0        # 时间，用来计算动态障碍的位置
+        self.timelog = 0        # Time, used to calculate the position of dynamic obstacles
         self.timeStep = 0.1
 
-        self.xmax = 10 / 180 * np.pi  # 偏航角速度最大值  每个步长允许变化的角度
-        self.gammax = 10 / 180 * np.pi  # 爬升角速度最大值  每个步长允许变化的角度
-        self.maximumClimbingAngle = 100 / 180 * np.pi  # 最大爬升角
-        self.maximumSubductionAngle = - 75 / 180 * np.pi  # 最大俯冲角
+        self.xmax = 10 / 180 * np.pi  # Maximum yaw rate, the angle allowed to change at each step
+        self.gammax = 10 / 180 * np.pi  # Maximum climb rate, the angle allowed to change at each step
+        self.maximumClimbingAngle = 100 / 180 * np.pi  # Maximum climbing angle
+        self.maximumSubductionAngle = - 75 / 180 * np.pi  # Maximum subduction angle
 
         self.vObs = None
         self.vObsNext = None
 
-        self.path = np.array([[]]).reshape(-1,3)        # 保存动态球的运动轨迹
+        self.path = np.array([[]]).reshape(-1,3)        # Save the motion trajectory of dynamic obstacles
 
         self.env_num = len(obs_list)
         self.env = obs_list[0]
 
     def reset(self):
-        self.timelog = 0                                         # 重置时间
-        self.path = np.array([[]]).reshape(-1, 3)                # 清空障碍路径记录表
-        self.env = obs_list[np.random.randint(0, self.env_num)]  # 随机一个训练环境
+        self.timelog = 0                                         # Reset time
+        self.path = np.array([[]]).reshape(-1, 3)                # Clear obstacle path record
+        self.env = obs_list[np.random.randint(0, self.env_num)]  # Randomly select a training environment
 
     def updateObs(self,if_test=False):
-        """返回位置与速度。"""
+        """Return position and speed."""
         if if_test:
-            """测试环境"""
-            self.timelog, dic = obs_list[3](self.timelog, self.timeStep)    #测试时的环境
+            """Test environment"""
+            self.timelog, dic = obs_list[3](self.timelog, self.timeStep)    # Test environment
         else:
-            """否则用reset时随机的一个环境"""
-            self.timelog, dic = self.env(self.timelog, self.timeStep)       #训练时的环境
+            """Otherwise use a randomly selected environment from reset"""
+            self.timelog, dic = self.env(self.timelog, self.timeStep)       # Training environment
         self.vObs = dic['v']
         self.path = np.vstack((self.path, dic['obsCenter']))
         return dic
 
     def calDynamicState(self, uavPos, obsCenter):
-        """强化学习模型获得的state。"""
+        """State obtained from the reinforcement learning model."""
         s1 = (obsCenter - uavPos)*(self.distanceCost(obsCenter,uavPos)-self.obsR)/self.distanceCost(obsCenter,uavPos)
         s2 = self.goal - uavPos
         s3 = self.vObs
@@ -93,7 +93,7 @@ class IIFDS:
         vp = np.exp(-T / self.lam) * vObs
         M = np.eye(3) + repulsiveMatrix + tangentialMatrix
         ubar = (M.dot(u - vp.reshape(-1, 1)).T + vp.reshape(1, -1)).squeeze()
-        # 限制ubar的模长，避免进入障碍内部后轨迹突变
+        # Constrain the magnitude of ubar to avoid abrupt trajectory changes after entering the obstacle.
         if self.calVecLen(ubar) > 5:
             ubar = ubar/self.calVecLen(ubar)*5
         if qBefore[0] is None:
@@ -105,21 +105,21 @@ class IIFDS:
 
     def kinematicConstrant(self, q, qBefore, qNext):
         """
-        运动学约束函数 返回(上一时刻航迹角，上一时刻爬升角，约束后航迹角，约束后爬升角，约束后下一位置qNext)
+        Kinematic constraint function returns (previous trajectory angle, previous climb angle, constrained trajectory angle, constrained climb angle, constrained next position qNext)
         """
-        # 计算qBefore到q航迹角x1,gam1
+        # Calculate the trajectory angle x1 and climb angle gam1 from qBefore to q
         qBefore2q = q - qBefore
         if qBefore2q[0] != 0 or qBefore2q[1] != 0:
-            x1 = np.arcsin(np.abs(qBefore2q[1] / np.sqrt(qBefore2q[0] ** 2 + qBefore2q[1] ** 2)))  # 这里计算的角限定在了第一象限的角 0-pi/2
+            x1 = np.arcsin(np.abs(qBefore2q[1] / np.sqrt(qBefore2q[0] ** 2 + qBefore2q[1] ** 2)))  # The angle calculated here is limited to the first quadrant 0-pi/2
             gam1 = np.arcsin(qBefore2q[2] / np.sqrt(np.sum(qBefore2q ** 2)))
         else:
             return None, None, None, None, qNext
-        # 计算q到qNext航迹角x2,gam2
+        # Calculate the trajectory angle x2 and climb angle gam2 from q to qNext
         q2qNext = qNext - q
-        x2 = np.arcsin(np.abs(q2qNext[1] / np.sqrt(q2qNext[0] ** 2 + q2qNext[1] ** 2)))  # 这里同理计算第一象限的角度
+        x2 = np.arcsin(np.abs(q2qNext[1] / np.sqrt(q2qNext[0] ** 2 + q2qNext[1] ** 2)))  # Similarly, compute the angle in the first quadrant here.
         gam2 = np.arcsin(q2qNext[2] / np.sqrt(np.sum(q2qNext ** 2)))
 
-        # 根据不同象限计算矢量相对于x正半轴的角度 0-2 * pi
+        # Calculate the angle of the vector with respect to the positive x-axis (0 to 2 × π) based on its quadrant.
         if qBefore2q[0] > 0 and qBefore2q[1] > 0:
             x1 = x1
         if qBefore2q[0] < 0 and qBefore2q[1] > 0:
@@ -138,7 +138,7 @@ class IIFDS:
             x1 = np.pi * 3 / 2
 
 
-        # 根据不同象限计算与x正半轴的角度
+        # Calculate the angle with respect to the positive x-axis based on the corresponding quadrant.
         if q2qNext[0] > 0 and q2qNext[1] > 0:
             x2 = x2
         if q2qNext[0] < 0 and q2qNext[1] > 0:
@@ -156,11 +156,11 @@ class IIFDS:
         if q2qNext[0] == 0 and q2qNext[1] < 0:
             x2 = np.pi * 3 / 2
 
-        # 约束航迹角x   xres为约束后的航迹角
-        deltax1x2 = self.angleVec(q2qNext[0:2], qBefore2q[0:2])  # 利用点乘除以模长乘积求xoy平面投影的夹角
+        # Constrain the trajectory angle x
+        deltax1x2 = self.angleVec(q2qNext[0:2], qBefore2q[0:2])  # Use dot product divided by the product of magnitudes to find the angle between the projections on the xoy plane
         if deltax1x2 < self.xmax:
             xres = x2
-        elif x1 - x2 > 0 and x1 - x2 < np.pi:  # 注意这几个逻辑
+        elif x1 - x2 > 0 and x1 - x2 < np.pi:  # Note these logical conditions
             xres = x1 - self.xmax
         elif x1 - x2 > 0 and x1 - x2 > np.pi:
             xres = x1 + self.xmax
@@ -169,7 +169,8 @@ class IIFDS:
         else:
             xres = x1 - self.xmax
 
-        # 约束爬升角gam   注意：爬升角只用讨论在-pi/2到pi/2区间，这恰好与arcsin的值域相同。  gamres为约束后的爬升角
+        # Constrain the climb angle gam
+        # Note: The climb angle is only discussed in the range of -pi/2 to pi/2, which happens to be the same as the range of arcsin.
         if np.abs(gam1 - gam2) <= self.gammax:
             gamres = gam2
         elif gam2 > gam1:
@@ -181,7 +182,7 @@ class IIFDS:
         if gamres < self.maximumSubductionAngle:
             gamres = self.maximumSubductionAngle
 
-        # 计算约束过后下一个点qNext的坐标
+        # Calculate the coordinates of the next point qNext after constraints
         Rq2qNext = self.distanceCost(q, qNext)
         deltax = Rq2qNext * np.cos(gamres) * np.cos(xres)
         deltay = Rq2qNext * np.cos(gamres) * np.sin(xres)
@@ -210,8 +211,8 @@ class IIFDS:
                 _ = iifds.updateObs(if_test=True)
                 break
             path = np.vstack((path, uavPos))
-        print('路径的长度为:%f'%self.calPathLen(path))
-        print('奖励为:%f' % reward)
+        print('The length of the path is: %f' % self.calPathLen(path))
+        print('The reward is: %f' % reward)
         # np.savetxt('./data_csv/pathMatrix.csv', path, delimiter=',')
         np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-SAC-random_start/data_csv/pathMatrix.csv', path, delimiter=',')
         self.save_data()
@@ -221,7 +222,7 @@ class IIFDS:
         return np.sqrt(np.sum((point1 - point2) ** 2))
 
     def initField(self, pos, V0, goal):
-        """计算初始流场，返回列向量。"""
+        """Compute the initial flow field and return a column vector."""
         temp1 = pos[0] - goal[0]
         temp2 = pos[1] - goal[1]
         temp3 = pos[2] - goal[2]
@@ -230,7 +231,7 @@ class IIFDS:
 
     @staticmethod
     def partialDerivativeSphere(obs, pos, r):
-        """计算球障碍物方程偏导数，返回列向量。"""
+        """Compute the partial derivative of the sphere obstacle equation and return a column vector."""
         temp1 = pos[0] - obs[0]
         temp2 = pos[1] - obs[1]
         temp3 = pos[2] - obs[2]
@@ -238,14 +239,14 @@ class IIFDS:
 
     @staticmethod
     def calculateT(obs, pos, r):
-        """计算T。"""
+        """Compute T."""
         temp1 = pos[0] - obs[0]
         temp2 = pos[1] - obs[1]
         temp3 = pos[2] - obs[2]
         return (temp1**2 + temp2**2 + temp3**2)/r**2
 
     def calPathLen(self, path):
-        """计算一个轨迹的长度。"""
+        """Compute the length of a trajectory."""
         num = path.shape[0]
         len = 0
         for i in range(num-1):
@@ -254,9 +255,9 @@ class IIFDS:
 
     def trans(self, originalPoint, xNew, yNew, zNew):
         """
-        坐标变换后地球坐标下坐标
-        newX, newY, newZ是新坐标下三个轴上的方向向量
-        返回列向量
+        Coordinate transformation to Earth coordinates
+        newX, newY, newZ are the direction vectors along the three axes in the new coordinate system
+        Returns a column vector
         """
         lenx = self.calVecLen(xNew)
         cosa1 = xNew[0] / lenx
@@ -284,22 +285,22 @@ class IIFDS:
 
     @staticmethod
     def calVecLen(vec):
-        """计算向量模长。"""
+        """Compute the magnitude of a vector."""
         return np.sqrt(np.sum(vec**2))
 
     @staticmethod
-    def angleVec(vec1, vec2):  # 计算两个向量之间的夹角
+    def angleVec(vec1, vec2):  # Compute the angle between two vectors
         temp = np.dot(vec1, vec2) / np.sqrt(np.sum(vec1 ** 2)) / np.sqrt(np.sum(vec2 ** 2))
-        temp = np.clip(temp, -1, 1)  # 可能存在精度误差导致上一步的temp略大于1，因此clip
+        temp = np.clip(temp, -1, 1)  # Clip to handle potential floating-point errors
         theta = np.arccos(temp)
         return theta
 
 
     def save_data(self):
-        np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-DDPG-random_start/env3_csv/start_sac3.csv', self.start, delimiter=',')
-        np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-DDPG-random_start/env3_csv/goal_sac3.csv', self.goal, delimiter=',')
-        np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-DDPG-random_start/env3_csv/obs_r_sac3.csv', np.array([self.obsR]), delimiter=',')
-        np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-DDPG-random_start/env3_csv/obs_trace_sac3.csv', self.path, delimiter=',')
+        np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/env3_csv/start_sac3.csv', self.start, delimiter=',')
+        np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/env3_csv/goal_sac3.csv', self.goal, delimiter=',')
+        np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/env3_csv/obs_r_sac3.csv', np.array([self.obsR]), delimiter=',')
+        np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/env3_csv/obs_trace_sac3.csv', self.path, delimiter=',')
 
 
 

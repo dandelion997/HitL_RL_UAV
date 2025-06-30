@@ -1,6 +1,6 @@
 import sys,os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-"""这个文件是通过键盘读取人类动作"""
+"""This file reads human actions through the keyboard."""
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-    # 绘制起点和终点
+    # Plot the start and goal points
     ax.scatter(start[0], start[1], start[2], s=60, c='cyan', marker='o', edgecolors='k')
     ax.scatter(goal[0], goal[1], goal[2], s=60, c='magenta', marker='o', edgecolors='k')
     ax.text(start[0], start[1], start[2], '  start')
@@ -50,8 +50,8 @@ if __name__ == "__main__":
     ax.set_xlabel('x(m)')
     ax.set_ylabel('y(m)')
     ax.set_zlabel('z(m)')
-    ax.set_title('UAV动态航迹规划路径',fontproperties=font)
-    ax.set_box_aspect([1,1,1])
+    ax.set_title('UAV Dynamic Trajectory Planning Path', fontproperties=font)
+    ax.set_box_aspect([1, 1, 1])
 
     time_step = 0.1
 
@@ -65,17 +65,17 @@ if __name__ == "__main__":
     
         #plt.draw()
         #plt.pause(0.01)
-    
-        # 利用键盘输入人的动作
-        a1=input("请输入第一个动作：")
+
+        # Read human actions through the keyboard
+        a1=input("Please enter the first action:")
         a1=float(a1)
-        a2=input("请输入第一个动作：")
+        a2=input("Please enter the second action:")
         a2=float(a2)
-        a3=input("请输入第一个动作：")
+        a3=input("Please enter the third action:")
         a3=float(a3)
         action=[a1,a2,a3]
-        
-        # 与环境交互
+
+        # Interact with the environment
         qNext = iifds.getqNext(q, obsCenter, vObs, action[0], action[1], action[2], qBefore)
         rewardSum += getReward(obsCenterNext, qNext, q, qBefore, iifds)
 
@@ -105,14 +105,14 @@ if __name__ == "__main__":
                           [obsCenter[1], obsCenterNext[1]],
                           [obsCenter[2], obsCenterNext[2]], linewidth=2, color='b')
 
-        # draw_sphere(ax, obs_center, obs_r)  # 绘制动态障碍物的球体
+        # draw_sphere(ax, obs_center, obs_r)  # Draw the dynamic obstacle sphere
         plt.draw()
         b2, = ax.plot([qBefore[0], q[0]],
                           [qBefore[1], q[1]],
                           [qBefore[2], q[2]], linewidth=2, color='r')
         plt.draw()
         if i == 2:
-            ax.legend([b1, b2, B2], ["障碍物移动轨迹", "UAV规划航路", "UAV"], loc='best')
+            ax.legend([b1, b2, B2], ["Obstacle Moving Trajectory", "UAV Planned Path", "UAV"], loc='best')
 
         plt.pause(0.1)
     plt.show()

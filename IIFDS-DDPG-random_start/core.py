@@ -4,10 +4,10 @@ import torch
 import torch.nn as nn
 
 
-def combined_shape(length, shape=None):  #返回一个元组(x,y)
+def combined_shape(length, shape=None):  
     if shape is None:
         return (length,)
-    return (length, shape) if np.isscalar(shape) else (length, *shape) # ()可以理解为元组构造函数，*号将shape多余维度去除
+    return (length, shape) if np.isscalar(shape) else (length, *shape) 
 
 def count_vars(module):
     return sum([np.prod(p.shape) for p in module.parameters()])

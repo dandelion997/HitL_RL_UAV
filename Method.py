@@ -14,10 +14,10 @@ def getReward(obsCenter, qNext, q, qBefore, iifds):
     distance = iifds.distanceCost(qNext, obsCenter)
     flag = True if distance <= iifds.obsR else False
     reward = 0
-    if flag: # 与障碍物有交点
+    if flag: # Intersecting with the obstacle.
        reward += (distance - iifds.obsR)/iifds.obsR - 1
     else:
-        if distance < iifds.obsR + 0.4:   # 威胁区
+        if distance < iifds.obsR + 0.4:   # Threat zone
             tempR = iifds.obsR + 0.4
             reward += (distance-tempR)/tempR-0.3
         distance1 = iifds.distanceCost(qNext, iifds.goal)
@@ -32,7 +32,7 @@ def getReward(obsCenter, qNext, q, qBefore, iifds):
     # reward = 0
     # r_len=0
     # r_col=0
-    # if flag: # 与障碍物有交点
+    # if flag: # Intersecting with the obstacle.
     #     r_col = (distance - iifds.obsR)/iifds.obsR - 1
     # else:
     #     r_col = (distance - iifds.obsR)/iifds.obsR

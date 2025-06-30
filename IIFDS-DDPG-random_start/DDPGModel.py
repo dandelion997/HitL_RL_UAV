@@ -6,7 +6,7 @@ import core as core
 from torch.utils.tensorboard import SummaryWriter
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-class ReplayBuffer:   # 采样后输出为tensor
+class ReplayBuffer:   # The output after sampling is a tensor.
     """
     A simple FIFO experience replay buffer for DDPG agents.
     """
@@ -60,7 +60,7 @@ class DDPG:
         self.replay_buffer = ReplayBuffer(obs_dim=obs_dim, act_dim=act_dim, size=replay_size)
         self.update_num = 0
 
-    def compute_loss_q(self, data):   #返回(q网络loss, q网络输出的状态动作值即Q值)
+    def compute_loss_q(self, data):   #Return (Q-network loss, state-action value output by the Q-network, i.e., Q-value)
         o, a, r, o2, d = data['obs'], data['act'], data['rew'], data['obs2'], data['done']
 
         q = self.ac.q(o,a)
@@ -73,12 +73,12 @@ class DDPG:
         # MSE loss against Bellman backup
         loss_q = ((q - backup)**2).mean()
 
-        return loss_q # 这里的loss_q没加负号说明是最小化，很好理解，TD正是用函数逼近器去逼近backup，误差自然越小越好
+        return loss_q # The absence of a negative sign for loss_q here indicates minimization, which is easy to understand. TD is precisely about using function approximators to approach the backup, so the error naturally needs to be minimized.
 
     def compute_loss_pi(self, data):
         o = data['obs']
         q_pi = self.ac.q(o, self.ac.pi(o))
-        return -q_pi.mean()  # 这里的负号表明是最大化q_pi,即最大化在当前state策略做出的action的Q值
+        return -q_pi.mean()  # The negative sign here indicates maximization of q_pi, i.e., maximizing the Q-value of the action taken by the current policy in the current state.
 
     def update(self, data):
         # First run one gradient descent step for Q.

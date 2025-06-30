@@ -2,7 +2,6 @@
 # File func: test
 import sys,os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-"""这个文件是针对单动态障碍的测试环境，测试后打开matlab运行test.m即可得到可视化结果"""
 import torch
 import math
 import numpy as np
@@ -48,7 +47,7 @@ if __name__ == "__main__":
         vObs, obsCenter, obsCenterNext = dic['v'], dic['obsCenter'], dic['obsCenterNext']
         obs = iifds.calDynamicState(q, obsCenter)
         obs = torch.as_tensor(obs, dtype=torch.float, device=device)
-        # 模型切换到评估模式
+        # Switch the model to evaluation mode.
         dynamicController.eval()
         action_sum = np.zeros(conf.act_dim)
         for _ in range(num_runs):
@@ -75,8 +74,8 @@ if __name__ == "__main__":
         
         print(b_m)
         actionCurve = np.append(actionCurve, action_mean)
-        
-        # 与环境交互
+
+        # Interact with the environment
         qNext = iifds.getqNext(q, obsCenter, vObs, action_mean[0], action_mean[1], action_mean[2], qBefore)
         rewardSum += getReward(obsCenterNext, qNext, q, qBefore, iifds)
 
@@ -98,6 +97,6 @@ if __name__ == "__main__":
     np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-DDPG-random_start/shiyan_csv/b_m4.csv', bm_stack, delimiter=',')
     iifds.save_data()
     routeLen = iifds.calPathLen(path)
-    print('该路径的奖励总和为:%f，路径的长度为:%f' % (rewardSum,routeLen))
+    print('The total reward for this path is: %f, and the length of the path is: %f' % (rewardSum, routeLen))
     plt.show()
 

@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import integrate
-#任务难度d,当前知识k,工作负荷w(整数值，[1,3]负荷属于正常值，[4,6]负荷过重),是否犯困s(离散值，只取0或者1)
+#Task difficulty $d$, current knowledge $k$, workload $w$ (integer value; \[1, 3] indicates normal workload, \[4, 6] indicates excessive workload), and drowsiness $s$ (discrete value, only 0 or 1).
 def compute_k(k,w,d):
     if k>=d:
         k_next=d
@@ -20,9 +20,9 @@ def integrand2(x):
 if __name__ == "__main__":
     k=1
     d=20
-    #p=0.1   #难度值为无穷的概率,取值（0，1）
-    #elta=0.84 #指数分布的超参数,取值（0，1）
-    #delta=1  #预期报酬函数的超参数,取值（0，无穷）
+    #p = 0.1   # Probability that the difficulty value is infinite, ranging between (0, 1)
+    #elta=0.84 # Exponential distribution hyperparameter, taking values (0, 1)
+    #delta=1  # Expected reward function hyperparameter, taking values (0, infinity)
     b_stack=[]
     
     W=np.loadtxt('/home/prolee/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-DDPG-random_start/shiyan_csv/work_h4.csv', delimiter=',')

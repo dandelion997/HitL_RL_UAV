@@ -1,12 +1,12 @@
 # File func: config file
-"""配置参数文件"""
+"""Configuration parameter file"""
 class Config:
     def __init__(self):
         self.obs_dim = 9
         self.act_dim = 3
         self.actionBound = [[0.1,3],[0.1,3],[0.1,3]]
 
-        self.MAX_EPISODE = 100
+        self.MAX_EPISODE = 1000
         self.MAX_STEP = 500
         self.batch_size = 128
 
