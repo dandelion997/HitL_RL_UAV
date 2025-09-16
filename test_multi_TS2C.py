@@ -307,6 +307,14 @@ class Environment:
         
         humanController = torch.load('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-{}-random_start/TrainedModel/dynamicActor_h.pkl'.format(method), map_location=device)
         return humanController
+    
+    @staticmethod
+    def load_Q(method):
+        import sys
+        sys.path.append('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-{}-random_start'.format(method)) # Solve the problem that the saved model path is not the same as the loaded file path
+        
+        Q_value = torch.load('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-{}-random_start/TrainedModel/dynamicCritic_h.pkl'.format(method), map_location=device)
+        return Q_value
 
 
 if __name__ == "__main__":
@@ -318,6 +326,7 @@ if __name__ == "__main__":
     METHOD = 'DDPG'                       # Fill in the model to be tested here
     controller = env.load_model(METHOD)
     human=env.load_human(METHOD)
+    Q=env.load_Q(METHOD)
     uav_pos = env.start
     uav_path = env.start.reshape(1,-1)   # Record UAV trace array
     actionCurve = np.array([])
@@ -326,10 +335,12 @@ if __name__ == "__main__":
     qBefore = [None,None,None]
     reward_sum = 0
     reward_stack=[]
+    Q_vec=[]
     if_test_origin_ifds = False        # Whether to use the untrained ifds algorithm
     threat_index = 0
     # Calculate the parameters needed for uncertainty
     action_matrix=np.zeros((3, 3))
+    q=0
     num_runs = 10
     tau = 1.0
     I_3 = np.eye(3)
@@ -347,21 +358,19 @@ if __name__ == "__main__":
             action_sum = np.zeros(config.act_dim)
             for _ in range(num_runs):
                  action = controller(state).cpu().detach().numpy()
-                 action_sum += action
-                 action_matrix+=np.dot(action.T,action)
-            a = action_sum / num_runs 
-            a = transformAction(a, config.actionBound, config.act_dim)
-            # Calculate uncertainty
-            Var1=np.dot(np.array(a).T,np.array(a))
-            Var2=(1/tau)*I_3+(1/num_runs)* action_matrix
-            Var3=Var2-Var1
-            Uncertainty=abs(np.max(np.diagonal(Var3).flatten()))
-            print(Uncertainty)
+                 q=Q(state,action).cpu().detach().numpy()
+                 Q_vec.append(q)
+            a_m = action_sum / num_runs 
+            a_m = transformAction(a_m, config.actionBound, config.act_dim)
+            a_h=human(state).cpu().detach().numpy()
+            a_h=transformAction(a_h, config.actionBound, config.act_dim)
             # Action selection
-            if Uncertainty>7:
-                a=human(state).cpu().detach().numpy()
-                a=transformAction(a, config.actionBound, config.act_dim)
-
+            Q_var=np.var(Q_vec,axis=0)
+            Q_diff=abs(Q(state,a_m).cpu().detach().numpy()-Q(state,a_h).cpu().detach().numpy())
+            if Q_diff >2 or Q_var > 0.4:
+                a = a_h
+            else:
+                a = a_m
             action_trace = np.append(action_trace,np.array(a).reshape(-1,3),axis=0)  # Save action trace
             actionCurve = np.append(actionCurve, a)
 

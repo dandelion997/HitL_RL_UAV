@@ -13,12 +13,6 @@ from config import Config
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def integrand3(x,u):
-    return (u/x)*0.85**x*np.log(1/0.85)
-
-def integrand4(x):
-    return 0.85**x*np.log(1/0.85)
-
 if __name__ == "__main__":
     num_runs = 10
     tau = 1.0
@@ -32,17 +26,17 @@ if __name__ == "__main__":
     
     dynamicController = torch.load('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-DDPG-random_start/TrainedModel/dynamicActor.pkl',map_location=device)
     humanController = torch.load('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-DDPG-random_start/TrainedModel/dynamicActor_h.pkl',map_location=device)
-    actionCurve = np.array([])
+    Q=torch.load('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-DDPG-random_start/TrainedModel/dynamicCritic_h.pkl',map_location=device)
 
     q = iifds.start
     qBefore = [None, None, None]
     path = iifds.start.reshape(1,-1)
     action_stack=[]
     reward_stack=[]
-    bm_stack=[]
+    Q_vec=[]
     #path1=np.array([None, None, None])
     rewardSum = 0
-    cachy=10
+    qvalue=0
     for i in range(500):
         action_matrix.fill(0)
         action_sum=0
@@ -55,33 +49,20 @@ if __name__ == "__main__":
         action_sum = np.zeros(conf.act_dim)
         for _ in range(num_runs):
             action = dynamicController(obs).cpu().detach().numpy()
-            action_sum += action
-            action_matrix+=np.dot(action.T,action)
-        #print(action_matrix)
-        action_mean = action_sum / num_runs
-        #print(Var1)
-        action_mean = transformAction(action_mean, actionBound, conf.act_dim)
-        #print(action_mean)
-        action_stack.append(action_mean)
-        Var1=np.dot(np.array(action_mean).T,np.array(action_mean))
-        Var2=(1/tau)*I_3+(1/num_runs)* action_matrix
-        Var3=Var2-Var1
-        #print(Var3.shape)
-        Uncertainty=abs(np.max(np.diagonal(Var3).flatten()))
-        #print(Uncertainty)
-        # fenzi1,error1=integrate.quad(integrand3,Uncertainty,np.inf,args=(Uncertainty,))
-        # #fenzi=fenzi1+0.2
-        # fenmu1,error2=integrate.quad(integrand4,Uncertainty,np.inf)
-        # #fenmu=fenmu1+0.2
-        # b_m=1.5-fenzi1/fenmu1
-        # bm_stack.append(b_m)
-        # print(b_m)
-        if Uncertainty>10:
-            action_mean=humanController(obs).cpu().detach().numpy()
-            action_mean=transformAction(action_mean, actionBound, conf.act_dim)
-        actionCurve = np.append(actionCurve, action_mean)
-   
-        qNext = iifds.getqNext(q, obsCenter, vObs, action_mean[0], action_mean[1], action_mean[2], qBefore)
+            qvalue=Q(obs,action).cpu().detach().numpy()
+            Q_vec.append(qvalue)
+        a_m = action_sum / num_runs
+        a_m = transformAction(a_m, actionBound, conf.act_dim)
+        a_h=humanController(obs).cpu().detach().numpy()
+        a_h=transformAction(a_h, actionBound, conf.act_dim)
+        # Action selection
+        Q_var=np.var(Q_vec,axis=0)
+        Q_diff=abs(Q(obs,a_m).cpu().detach().numpy()-Q(obs,a_h).cpu().detach().numpy())
+        if Q_diff >2.4 or Q_var > 0.5:
+            a = a_h
+        else:
+            a = a_m
+        qNext = iifds.getqNext(q, obsCenter, vObs, a[0], a[1], a[2], qBefore)
         r= getReward(obsCenterNext, qNext, q, qBefore, iifds)
         reward_stack.append(r)
         rewardSum += r
@@ -93,10 +74,7 @@ if __name__ == "__main__":
             _ = iifds.updateObs(if_test=True)
             break
         path = np.vstack((path, q))
-        #path1 = np.vstack((path1, action_mean))
         
-
-    drawActionCurve(actionCurve.reshape(-1,3))
     
     routeLen = iifds.calPathLen(path)
     print('The total reward for this path is: %f, and the length of the path is: %f' % (rewardSum,routeLen))

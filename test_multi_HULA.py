@@ -126,13 +126,13 @@ class Environment:
         # Calculate the trajectory angle x1 and climb angle gam1 from qBefore to q
         qBefore2q = q - qBefore
         if qBefore2q[0] != 0 or qBefore2q[1] != 0:
-            x1 = np.arcsin(np.abs(qBefore2q[1] / np.sqrt(qBefore2q[0] ** 2 + qBefore2q[1] ** 2)))  # The angle calculated here is limited to the first quadrant 0-pi/2
+            x1 = np.arcsin(np.abs(qBefore2q[1] / np.sqrt(qBefore2q[0] ** 2 + qBefore2q[1] ** 2)))  # 这里计算的角限定在了第一象限的角 0-pi/2
             gam1 = np.arcsin(qBefore2q[2] / np.sqrt(np.sum(qBefore2q ** 2)))
         else:
             return None, None, None, None, qNext
         # Calculate the trajectory angle x2 and climb angle gam2 from q to qNext
         q2qNext = qNext - q
-        x2 = np.arcsin(np.abs(q2qNext[1] / np.sqrt(q2qNext[0] ** 2 + q2qNext[1] ** 2)))  # The angle calculated here is limited to the first quadrant 0-pi/2
+        x2 = np.arcsin(np.abs(q2qNext[1] / np.sqrt(q2qNext[0] ** 2 + q2qNext[1] ** 2)))  # 这里同理计算第一象限的角度
         gam2 = np.arcsin(q2qNext[2] / np.sqrt(np.sum(q2qNext ** 2)))
 
         # Calculate the angle of the vector with respect to the positive x-axis (0 to 2 × π) based on its quadrant.
@@ -215,7 +215,7 @@ class Environment:
         return -np.array([temp1, temp2, temp3], dtype=float).reshape(-1, 1) * V0 / temp4
 
     def calPathLen(self, path):
-        """Calculate the length of a trajectory."""
+        """ Calculate the length of a trajectory."""
         num = path.shape[0]
         len = 0
         for i in range(num - 1):
@@ -251,11 +251,11 @@ class Environment:
         return np.dot(invB, originalPoint.T)
 
     def save_data(self):
-        np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/multi_csv/start_ua.csv', self.start, delimiter=',')
-        np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/multi_csv/goal_ua.csv', self.goal, delimiter=',')
-        np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/multi_csv/obs_r_list_ua.csv',self.obs_r,delimiter=',')
+        np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/multi_csv/start.csv', self.start, delimiter=',')
+        np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/multi_csv/goal.csv', self.goal, delimiter=',')
+        np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/multi_csv/obs_r_list.csv',self.obs_r,delimiter=',')
         for i in range(self.obs_num):
-            np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/multi_csv/obs{}_trace_ua.csv'.format(i),self.path[i],delimiter=',')
+            np.savetxt('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/multi_csv/obs{}_trace.csv'.format(i),self.path[i],delimiter=',')
 
 
     @staticmethod
@@ -265,14 +265,14 @@ class Environment:
     @staticmethod
     def angleVec(vec1, vec2):  # Calculate the angle between two vectors
         temp = np.dot(vec1, vec2) / np.sqrt(np.sum(vec1 ** 2)) / np.sqrt(np.sum(vec2 ** 2))
-        temp = np.clip(temp, -1, 1)  # There may be precision errors that cause the previous temp to be slightly greater than 1, so clip
+        temp = np.clip(temp, -1, 1)  # Clip to handle potential numerical errors
         theta = np.arccos(temp)
         return theta
 
 
     @staticmethod
     def partialDerivativeSphere(obs, pos, r):
-        """Calculate the partial derivative of the sphere obstacle equation and return a column vector."""
+        """Calculate the partial derivative of the spherical obstacle equation and return a column vector."""
         temp1 = pos[0] - obs[0]
         temp2 = pos[1] - obs[1]
         temp3 = pos[2] - obs[2]
@@ -296,9 +296,17 @@ class Environment:
     def load_model(method):
         import sys
         sys.path.append('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-{}-random_start'.format(method)) # Solve the problem that the saved model path is not the same as the loaded file path
-
-        dynamicController = torch.load('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-{}-random_start/TrainedModel/dynamicActor_h.pkl'.format(method), map_location=device)
+ 
+        dynamicController = torch.load('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-{}-random_start/TrainedModel/dynamicActor.pkl'.format(method), map_location=device)
         return dynamicController
+    
+    @staticmethod
+    def load_human(method):
+        import sys
+        sys.path.append('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-{}-random_start'.format(method)) # Solve the problem that the saved model path is not the same as the loaded file path
+        
+        humanController = torch.load('/home/prolee/apps/UAV_Obstacle_Avoiding_DRL-master/Dynamic_obstacle_avoidance/IIFDS-{}-random_start/TrainedModel/dynamicActor_h.pkl'.format(method), map_location=device)
+        return humanController
 
 
 if __name__ == "__main__":
@@ -307,8 +315,9 @@ if __name__ == "__main__":
     from Method import drawActionCurve
     env = Environment(3)              # Initialize different dynamic scenarios with different numbers
     config = Config()
-    METHOD = 'SAC'                       # Fill in the model for testing here
+    METHOD = 'DDPG'                       # Fill in the model to be tested here
     controller = env.load_model(METHOD)
+    human=env.load_human(METHOD)
     uav_pos = env.start
     uav_path = env.start.reshape(1,-1)   # Record UAV trace array
     actionCurve = np.array([])
@@ -319,17 +328,41 @@ if __name__ == "__main__":
     reward_stack=[]
     if_test_origin_ifds = False        # Whether to use the untrained ifds algorithm
     threat_index = 0
+    # Calculate the parameters needed for uncertainty
+    action_matrix=np.zeros((3, 3))
+    num_runs = 10
+    tau = 1.0
+    I_3 = np.eye(3)
     for step in range(500):
         data_dic = env.update_obs_pos(uav_pos)
         v_obs, obs_center, obs_R = data_dic['v'], data_dic['obsCenter'], data_dic['obs_r']
         if if_test_origin_ifds:
-            a = [1,1.5,1.5]        # Default ifds three action values
+            a = [1,1.5,1.5]        # Default ifds action values
         else:
             state = env.calDynamicState(uav_pos,obs_center,obs_R,v_obs)
             state = torch.as_tensor(state, dtype=torch.float, device=device)
-            action = controller(state).cpu().detach().numpy()
-            a = transformAction(action, config.actionBound, config.act_dim)
-            action_trace = np.append(action_trace,np.array(a).reshape(-1,3),axis=0)  # Record action trace
+            # Switch model to evaluation mode
+            action_matrix.fill(0)
+            controller.eval()
+            action_sum = np.zeros(config.act_dim)
+            for _ in range(num_runs):
+                 action = controller(state).cpu().detach().numpy()
+                 action_sum += action
+                 action_matrix+=np.dot(action.T,action)
+            a = action_sum / num_runs 
+            a = transformAction(a, config.actionBound, config.act_dim)
+            # Calculate uncertainty
+            Var1=np.dot(np.array(a).T,np.array(a))
+            Var2=(1/tau)*I_3+(1/num_runs)* action_matrix
+            Var3=Var2-Var1
+            Uncertainty=abs(np.max(np.diagonal(Var3).flatten()))
+            # print(Uncertainty)
+            # Action selection
+            if Uncertainty>7:
+                a=human(state).cpu().detach().numpy()
+                a=transformAction(a, config.actionBound, config.act_dim)
+
+            action_trace = np.append(action_trace,np.array(a).reshape(-1,3),axis=0)  # Save action trace
             actionCurve = np.append(actionCurve, a)
 
         # Threat index calculation
@@ -341,7 +374,7 @@ if __name__ == "__main__":
 
         uav_next_pos = env.getqNext(uav_pos,obs_center,v_obs,obs_R,a[0],a[1],a[2],qBefore)
         if env.distanceCost(uav_next_pos,obs_center)<=obs_R:
-            print("Collision occurred!")
+            print("Collision detected!")
         r= get_reward_multiple(env,uav_next_pos,data_dic)
         reward_stack.append(r)
         reward_sum += r
@@ -354,7 +387,7 @@ if __name__ == "__main__":
         uav_path = np.vstack((uav_path, uav_pos))
         
     drawActionCurve(actionCurve.reshape(-1,3))
-    print("The length of the path is {}, the path reward is {}, and the threat index is {}".format(env.calPathLen(uav_path),reward_sum,threat_index))
+    print("Path length: {}, Path reward: {}, Threat index: {}".format(env.calPathLen(uav_path),reward_sum,threat_index))
 
     plt.show()
 
